@@ -15,3 +15,10 @@ Generating context "cluster1" client key to cluster1-client-key.pem
 
 ## Installation
 Since `kubecert` is written in Bash, you should be able to install them to any POSIX environment that has Bash installed.
+
+
+## Example
+
+```
+curl --cacert ./ca.pem --key ./cluster-key.pem --cert ./cluster.pem  'https://<api-server-ip-address>/swagger.json'
+```
