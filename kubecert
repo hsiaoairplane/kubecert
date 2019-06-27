@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+[[ -n $DEBUG ]] && set -x
+
+set -eou pipefail
+
+usage() {
+  cat <<"EOF"
+USAGE:
+  kubecert            : generate certificates
+  kubecert -h,--help  : show this message
+EOF
+}
+
+exit_err() {
+  echo >&2 "${1}"
+  exit 1
+}
+
+current_context() {
+  $KUBECTL config view -o=jsonpath='{.current-context}'
+}
+
+parse_ca() {
+  cur="$(current_context)" || exit_err "error getting current context"
+  $KUBECTL config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}' | base64 --decode > ca.pem
+  echo "Generating ca certificate to ca.pem" >&2
+}
+
+parse_client_cert() {
+  cur="$(current_context)" || exit_err "error getting current context"
+  $KUBECTL config view --raw --minify --flatten -o jsonpath='{.users[].user.client-certificate-data}' | base64 --decode > ${cur}-client.pem
+  echo "Generating context \"${cur}\" client certificate to ${cur}-client.pem" >&2
+}
+
+parse_client_key() {
+  cur="$(current_context)" || exit_err "error getting current context"
+  $KUBECTL config view --raw --minify --flatten -o jsonpath='{.users[].user.client-key-data}' | base64 --decode > ${cur}-client-key.pem
+  echo "Generating context \"${cur}\" client key to ${cur}-client-key.pem" >&2
+}
+
+main() {
+  if hash kubectl 2>/dev/null; then
+    KUBECTL=kubectl
+  elif hash kubectl.exe 2>/dev/null; then
+    KUBECTL=kubectl.exe
+  else
+    echo >&2 "kubectl is not installed"
+    exit
+  fi
+
+  if [[ "$#" -eq 0 ]]; then
+    parse_ca
+    parse_client_cert
+    parse_client_key
+  else
+    usage
+    exit 1
+  fi
+}
+
+main "$@"
